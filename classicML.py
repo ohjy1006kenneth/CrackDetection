@@ -1,12 +1,17 @@
 # Classical Machine Learning: pixel-wise classification + CRF refinement
 
+
 import os
 import numpy as np
 from skimage.io import imread, imsave
 from skimage.color import rgb2gray
 from skimage.feature import local_binary_pattern
+from skimage.filters import sobel
+from skimage.morphology import remove_small_objects
+from skimage.morphology import opening, closing, disk
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.utils import resample
 import matplotlib.pyplot as plt
 
 # Directories
@@ -27,32 +32,73 @@ def load_pair(filename):
     mask = imread(mask_path, as_gray=True) > 0.5  # Convert to binary
     return image, mask.astype(np.uint8)
 
-def extract_features(image):
-    gray = rgb2gray(image)
+def extract_features_and_labels(image, mask):
+    gray = (rgb2gray(image) * 255).astype(np.uint8)
     lbp = local_binary_pattern(gray, n_points, radius, method='uniform')
-    
-    # Flatten each channel for ML
+    edges = sobel(gray)
+
     features = np.stack([
         gray.flatten(),
-        lbp.flatten()
+        lbp.flatten(),
+        edges.flatten()
     ], axis=1)
-    
+
+    labels = mask.flatten()
+
+    # Balance classes
+    crack_idx = np.where(labels == 1)[0]
+    non_crack_idx = np.where(labels == 0)[0]
+
+    if len(crack_idx) == 0:
+        return np.empty((0, 3)), np.empty((0,), dtype=np.uint8)
+
+    non_crack_sampled = resample(non_crack_idx,
+                                replace=False,
+                                n_samples=len(crack_idx),
+                                random_state=42)
+
+    balanced_idx = np.concatenate([crack_idx, non_crack_sampled])
+    np.random.shuffle(balanced_idx)
+
+    return features[balanced_idx], labels[balanced_idx]
+
+
+def extract_features(image):
+    gray = (rgb2gray(image) * 255).astype(np.uint8)
+    lbp = local_binary_pattern(gray, n_points, radius, method='uniform')
+    edges = sobel(gray)
+
+    features = np.stack([
+        gray.flatten(),
+        lbp.flatten(),
+        edges.flatten()
+    ], axis=1)
+
     return features
 
-# 1. Collect all data
+def clean_prediction(predicted_mask, min_size=400):
+    binary_mask = predicted_mask.astype(bool)
+    cleaned = remove_small_objects(binary_mask, min_size=min_size)
+    cleaned = closing(cleaned, disk(3))  # close small gaps in cracks
+    cleaned = opening(cleaned, disk(2))  # remove tiny noise
+    return (cleaned.astype(np.uint8) * 255)
+
+# 1. Collect all balanced training data
 X, y = [], []
 
 for num in range(1, 119):  # 1 to 118 inclusive
     filename = f"{num:03d}"
     image, mask = load_pair(filename)
-    features = extract_features(image)
-    labels = mask.flatten()
-    
-    X.append(features)
-    y.append(labels)
+    features, labels = extract_features_and_labels(image, mask)
+
+    if features.shape[0] > 0:
+        X.append(features)
+        y.append(labels)
 
 X = np.vstack(X)
 y = np.concatenate(y)
+
+print(f"Training on {len(y)} samples with {np.mean(y)*100:.2f}% crack pixels.")
 
 # 2. Train/Test Split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -69,9 +115,10 @@ for num in range(1, 119):
     
     prediction = clf.predict(features)
     predicted_mask = prediction.reshape(mask.shape).astype(np.uint8) * 255  # scale to 0-255
+    predicted_mask = clean_prediction(predicted_mask)
 
     # Save prediction
-    save_path = os.path.join(PRED_DIR, f"{filename}_pred.png")
+    save_path = os.path.join(PRED_DIR, f"{filename}_pred.jpg")
     imsave(save_path, predicted_mask)
 
     # Optional: visualize a few
