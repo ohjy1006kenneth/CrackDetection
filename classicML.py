@@ -118,7 +118,7 @@ for num in range(1, 119):
     predicted_mask = clean_prediction(predicted_mask)
 
     # Save prediction
-    save_path = os.path.join(PRED_DIR, f"{filename}_pred.jpg")
+    save_path = os.path.join(PRED_DIR, f"classML_{filename}.jpg")
     imsave(save_path, predicted_mask)
 
     # Optional: visualize a few
