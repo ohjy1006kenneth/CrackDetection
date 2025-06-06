@@ -8,7 +8,7 @@ pred_path = "Results/classicalML"
 gt_path = "Dataset/Masks"
 
 # Get list of prediction files
-pred_files = sorted([f for f in os.listdir(pred_path) if f.endswith('.jpg')])
+pred_files = sorted([f for f in os.listdir(pred_path) if f.endswith('.png')])
 
 # Initialize metric lists
 # Precision: The porportion of pixels predicted as crack that are actually cracks.
