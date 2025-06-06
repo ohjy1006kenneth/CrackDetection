@@ -53,14 +53,17 @@ for fname in pred_files:
     error_mask = (gt_bin != pred_bin)
     correct_mask = (gt_bin == pred_bin)
 
-    # Only consider white lines (cracks) on the ground truth
-    crack_mask = (gt_bin == 1)
-    correct_mask = crack_mask & (pred_bin == 1)  # True positive: crack detected
-    error_mask = crack_mask & (pred_bin == 0)    # False negative: crack missed
+    # Masks for each case
+    tp_mask = (gt_bin == 1) & (pred_bin == 1)  # True positive: crack detected
+    tn_mask = (gt_bin == 0) & (pred_bin == 0)  # True negative: background detected
+    fp_mask = (gt_bin == 0) & (pred_bin == 1)  # False positive: background predicted as crack
+    fn_mask = (gt_bin == 1) & (pred_bin == 0)  # False negative: crack missed
 
-    # Draw correct in green, errors in red
-    gt_vis[correct_mask] = [0, 255, 0]  # Green for correct crack detection
-    gt_vis[error_mask] = [0, 0, 255]    # Red for missed cracks
+    # Draw on visualization
+    gt_vis[tp_mask] = [0, 255, 0]    # Green for correct crack detection
+    gt_vis[tn_mask] = [0, 0, 0]    # Black for correct background detection
+    gt_vis[fp_mask] = [0, 0, 255]  # Red for false positive
+    gt_vis[fn_mask] = [0, 0, 255]    # Red for missed cracks
 
     # Save visualization
     out_vis_path = os.path.join(pred_path, "ErrorViz")
