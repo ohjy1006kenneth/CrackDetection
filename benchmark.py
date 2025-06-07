@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics import precision_score, recall_score, f1_score, jaccard_score
 
 # Paths
-pred_path = "Results/classicalML"
+pred_path = "Results/U-Net"
 gt_path = "Dataset/Masks"
 
 # Get list of prediction files
