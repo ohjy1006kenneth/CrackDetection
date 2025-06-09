@@ -1,0 +1,3 @@
+Average processing time per image: 10.9712 seconds
+Individual times (seconds):
+10.9712

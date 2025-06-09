@@ -1,4 +1,4 @@
-Precision: nan
-Recall:    nan
-F1 Score:  nan
-IoU:       nan
+Precision: 0.7476
+Recall:    0.6857
+F1 Score:  0.7030
+IoU:       0.5546
